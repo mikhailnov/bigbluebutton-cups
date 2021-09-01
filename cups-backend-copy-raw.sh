@@ -42,7 +42,7 @@ CUPS_BACKEND_RETRY_CURRENT=7       # Job failed, retry this job immediately
 # We use 'set -e', script may fail somewhere,
 # make CUPS restart the job later if the error was unexpected
 _trap_exit(){
-	if [ $? != "$CUPS_BACKEND_FAILED" ]; then
+	if [ $? != "$CUPS_BACKEND_OK" ] && [ $? != "$CUPS_BACKEND_FAILED" ]; then
 		exit "$CUPS_BACKEND_RETRY"
 	fi
 }
