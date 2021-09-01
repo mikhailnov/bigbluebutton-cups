@@ -6,7 +6,7 @@
 # all artefacts of the meeting to /var/bigbluebutton/recording/raw/$meeting_id
 # and sends all that to a special worker which processes (converts) recordings.
 # All recordings are sent, even those where recording was not turned on,
-# because it may have been not tunred on erroneously and so we still have
+# because it may have been not turned on erroneously and so we still have
 # to keep the recording artefact. The storage of recordings will rotate them.
 # "Printer class" in CUPS may be used to load balance processing of recordings
 # to multiple workers. Printer Device URI can be used to show which "printer"
@@ -38,6 +38,15 @@ CUPS_BACKEND_STOP=4                # Job failed, stop queue
 CUPS_BACKEND_CANCEL=5              # Job failed, cancel job
 CUPS_BACKEND_RETRY=6               # Job failed, retry this job later
 CUPS_BACKEND_RETRY_CURRENT=7       # Job failed, retry this job immediately
+
+# We use 'set -e', script may fail somewhere,
+# make CUPS restart the job later if the error was unexpected
+_trap_exit(){
+	if [ $? != "$CUPS_BACKEND_FAILED" ]; then
+		exit "$CUPS_BACKEND_RETRY"
+	fi
+}
+trap '_trap_exit' EXIT
 
 input=""
 
