@@ -83,8 +83,6 @@ fi
 # Examples of valid URIs:
 # - local/srv/container2/raw
 #   it means copy from /var/bigbluebutton/recording/raw/$meeting_id to /srv/container2/raw/$meeting_id
-# - ssh/port/user@host/remote_path (has not been tested and used!)
-#   it means rsync -av -e "ssh -p $port" /var/bigbluebutton/recording/raw/$meeting_id user@host:/remote_path/
 DEVICE_URI="$(echo "$DEVICE_URI" | sed -e 's,^bbb-copy-raw://,,' -e 's,^bbb-copy-raw:/,,')"
 case "$DEVICE_URI" in
 	local/* )
@@ -98,17 +96,26 @@ case "$DEVICE_URI" in
 		fi
 		mkdir -p "$target_dir"/"$jobtitle"
 		dd if="$input" | tar -C "$target_dir"/"$jobtitle" xf -
+		echo > "$target_dir"/"$jobtitle"/.cups.copied_raw
+		chown -R bigbluebutton:bigbluebutton "$target_dir"/"$jobtitle"
+		# TODO: rebuild recordings via CUPS instead of bbb worker in ruby
+		#if [ "$target_dir" = /var/bigbluebutton/recording/raw ]; then
+		#	bbb-record --rebuild "$jobtitle"
+		#fi
 	;;
-	ssh/* )
-		ssh_port="$(echo "$DEVICE_URI" | awk -F '/' '{print $2}')"
-		ssh_userhost="$(echo "$DEVICE_URI" | awk -F '/' '{print $3}')"
-		# ssh/port/user@host/remote_path/dir1/dir2 -> remote_path/dir1/dir2
-		# https://stackoverflow.com/a/49130247
-		ssh_remote_path="$(echo "$DEVICE_URI" | awk -F '/' '{for(i=4; i<=NF; ++i) printf "%s/", $i;}')"
-		# TODO: run as sudo -u <special user> ssh ...
-		ssh -p "$ssh_port" "$ssh_userhost" mkdir -p "$ssh_remote_path"/"$jobtitle"
-		dd if="$input" | ssh -p "$ssh_port" "$ssh_userhost" tar -C "$ssh_remote_path"/"$jobtitle" xf -
-	;;
+# XXX ssh probably makes no sense here, comment it for now
+# ssh can make sense if we use ionotify on directory where new recordings appear and run building task
+# but we run CUPS on every wndpoint, so ssh seems to not make any sense
+#	ssh/* )
+#		ssh_port="$(echo "$DEVICE_URI" | awk -F '/' '{print $2}')"
+#		ssh_userhost="$(echo "$DEVICE_URI" | awk -F '/' '{print $3}')"
+#		# ssh/port/user@host/remote_path/dir1/dir2 -> remote_path/dir1/dir2
+#		# https://stackoverflow.com/a/49130247
+#		ssh_remote_path="$(echo "$DEVICE_URI" | awk -F '/' '{for(i=4; i<=NF; ++i) printf "%s/", $i;}')"
+#		# TODO: run as sudo -u <special user> ssh ...
+#		ssh -p "$ssh_port" "$ssh_userhost" mkdir -p "$ssh_remote_path"/"$jobtitle"
+#		dd if="$input" | ssh -p "$ssh_port" "$ssh_userhost" tar -C "$ssh_remote_path"/"$jobtitle" xf -
+#	;;
 	* )
 		echo CRIT: Device URI is not supported! 1>&1
 		exit "$CUPS_BACKEND_FAILED"
